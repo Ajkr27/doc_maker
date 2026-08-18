@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>API Doc Builder</title>
+<style>
+  :root{
+    --bg:#0a0d12;
+    --panel:#11151c;
+    --panel2:#161b24;
+    --border:#232a36;
+    --border-soft:#1b212b;
+    --text:#dfe6ef;
+    --muted:#7c8797;
+    --dim:#4c5666;
+    --accent:#3fd6ae;
+    --accent-dim:#1f6e5a;
+    --amber:#e0a840;
+    --red:#e0616f;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Consolas, "Courier New", monospace;
+    --sans: -apple-system, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  ::selection{background:var(--accent-dim);color:#fff;}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:#242b38;border-radius:6px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 22px;border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,#0d1117,#0a0d12);
+    position:sticky;top:0;z-index:20;flex-wrap:wrap;gap:10px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);}
+  .brand h1{font-size:14.5px;font-weight:600;letter-spacing:.3px;margin:0;}
+  .brand span{color:var(--muted);font-size:11.5px;display:block;margin-top:1px;font-family:var(--mono);}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;}
+  button{
+    font-family:var(--sans);font-size:12.5px;font-weight:600;
+    background:var(--panel2);color:var(--text);border:1px solid var(--border);
+    padding:8px 13px;border-radius:6px;cursor:pointer;transition:.15s;letter-spacing:.2px;
+  }
+  button:hover{border-color:var(--dim);background:#1a2028;}
+  button.primary{background:var(--accent);color:#08130f;border-color:var(--accent);}
+  button.primary:hover{background:#57e0bc;}
+  button.pdf{background:var(--amber);color:#1a1204;border-color:var(--amber);}
+  button.pdf:hover{background:#f0bb5c;}
+  button.ghost{background:transparent;}
+  button.danger-hover:hover{border-color:var(--red);color:var(--red);}
+  input[type=file]{display:none;}
+
+  .layout{display:grid;grid-template-columns:1fr 1fr;gap:0;min-height:calc(100vh - 58px);}
+  @media (max-width:980px){.layout{grid-template-columns:1fr;}}
+
+  .editor{padding:22px;border-right:1px solid var(--border);overflow-y:auto;max-height:calc(100vh - 58px);}
+  .preview-wrap{padding:22px;overflow-y:auto;max-height:calc(100vh - 58px);background:#0c0f14;}
+
+  .section{
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:16px 16px 18px;margin-bottom:14px;
+  }
+  .section h3{
+    margin:0 0 12px;font-size:11px;text-transform:uppercase;letter-spacing:1.2px;
+    color:var(--accent);font-weight:700;display:flex;align-items:center;justify-content:space-between;
+  }
+  .section h3 .count{color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0;font-size:11px;}
+  label{display:block;font-size:11.5px;color:var(--muted);margin:10px 0 5px;font-weight:600;}
+  label:first-child{margin-top:0;}
+  input[type=text], textarea, select{
+    width:100%;background:#0b0e13;border:1px solid var(--border);color:var(--text);
+    padding:9px 10px;border-radius:6px;font-family:var(--mono);font-size:12.5px;
+    resize:vertical;outline:none;
+  }
+  input[type=text]:focus, textarea:focus, select:focus{border-color:var(--accent-dim);}
+  textarea{line-height:1.5;}
+  .row{display:flex;gap:8px;align-items:flex-start;margin-bottom:7px;}
+  .row input{flex:1;}
+  .row select{flex:0 0 90px;}
+  .icon-btn{
+    flex:0 0 30px;height:34px;background:var(--panel2);border:1px solid var(--border);
+    border-radius:6px;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;
+  }
+  .icon-btn:hover{color:var(--red);border-color:var(--red);}
+  .icon-btn.small{flex:0 0 26px;height:28px;font-size:13px;}
+  .add-row{
+    width:100%;margin-top:4px;border:1px dashed var(--border);background:transparent;
+    color:var(--muted);padding:8px;font-size:11.5px;
+  }
+  .add-row:hover{color:var(--accent);border-color:var(--accent-dim);}
+  .hint{font-size:10.5px;color:var(--dim);margin-top:6px;line-height:1.5;}
+  .custom-block{border:1px solid var(--border-soft);border-radius:8px;padding:10px;margin-bottom:10px;background:#0d1016;}
+  .custom-block-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .custom-block-top span{font-size:10.5px;color:var(--dim);font-family:var(--mono);}
+
+  /* table builder */
+  .tbl-cols{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+  .tbl-col-chip{display:flex;align-items:center;gap:5px;background:#0b0e13;border:1px solid var(--border);border-radius:5px;padding:4px 4px 4px 8px;}
+  .tbl-col-chip input{background:transparent;border:none;color:var(--text);font-size:11.5px;width:90px;padding:2px;}
+  .tbl-col-chip input:focus{outline:none;}
+  .tbl-col-chip button{background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:13px;padding:0 3px;}
+  .tbl-col-chip button:hover{color:var(--red);}
+  .tbl-rows-scroll{overflow-x:auto;}
+  .tbl-row{display:flex;gap:6px;margin-bottom:6px;align-items:center;}
+  .tbl-row input{flex:1 0 100px;min-width:100px;font-size:11.5px;padding:7px 8px;}
+
+  /* PREVIEW — mimics the exported Word doc */
+  .doc{
+    background:#ffffff;color:#1a1d23;border-radius:8px;padding:0 0 40px;
+    font-family: Calibri, "Segoe UI", Arial, sans-serif; max-width:760px;margin:0 auto;
+    box-shadow:0 0 0 1px #e4e4e4, 0 20px 50px -20px rgba(0,0,0,.6);
+    overflow:hidden;
+  }
+  .doc h1{
+    font-size:20px;margin:24px 40px 18px;color:#fff;background:#000;
+    padding:16px 24px;font-weight:700;letter-spacing:.2px;text-align:center;
+  }
+  .doc .meta{color:#000;font-size:11px;font-family:var(--mono);margin:0 24px 22px;padding-bottom:12px;border-bottom:1px solid #d9dde3;}
+  .doc h2{font-size:13.5px;text-transform:uppercase;letter-spacing:.4px;color:#000;margin:22px 24px 8px;padding:9px 12px;background:#e6eae2;font-weight:700;}
+  .doc p{font-size:13px;line-height:1.6;margin:0 24px 8px;color:#2a2f3a;}
+  .doc code, .doc pre{font-family:"Consolas","SF Mono",monospace;}
+  .doc .endpoint-box{background:#f3f5f9;border:1px solid #dde2ea;border-radius:5px;padding:9px 11px;font-size:12px;color:#12213f;word-break:break-all;margin:0 24px;}
+  .doc .kv{display:flex;font-size:12px;padding:5px 0;border-bottom:1px solid #eef0f3;}
+  .doc .kv b{width:130px;flex:0 0 130px;color:#12213f;}
+  .doc .kv span{color:#4a5162;word-break:break-all;}
+  .doc pre.block{background:#f7f8fa;color:#1a1d23;border:1px solid #dde2ea;padding:13px 14px;border-radius:6px;font-size:11.5px;line-height:1.55;overflow-x:auto;white-space:pre-wrap;word-break:break-word;margin:0 24px;}
+  .doc table{width:calc(100% - 48px);border-collapse:collapse;font-size:11.5px;margin:4px 24px 0;border:1px solid #000;}
+  .doc th{background:#eef1f5;color:#12213f;text-align:left;padding:8px 10px;font-weight:700;border:1px solid #000;}
+  .doc td{padding:7px 10px;border:1px solid #000;color:#1a1d23;background:#fff;}
+  .doc .billable-yes{color:#0a8a56;font-weight:700;}
+  .doc .billable-no{color:#b23b3b;font-weight:700;}
+  .doc .empty{color:#b6bcc6;font-style:italic;font-size:12px;margin:0 24px 8px;}
+  .doc ul{margin:4px 24px 8px;padding-left:20px;}
+  .doc li{font-size:13px;line-height:1.6;color:#2a2f3a;margin-bottom:3px;}
+
+  .preview-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;font-weight:700;display:flex;align-items:center;gap:8px;}
+  .preview-label .live{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1.8s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+  /* PRINT — used for "Export as PDF" (prints only the doc preview, full page) */
+  @media print{
+    body *{ visibility:hidden; }
+    .doc, .doc *{ visibility:visible; }
+    .doc{
+      position:absolute; top:0; left:0; width:100%; max-width:none;
+      box-shadow:none; border-radius:0; padding:0 0 14mm; margin:0;
+    }
+    .doc h1{ padding:16px 24mm; margin:14mm 24mm 18px; }
+    .doc .meta, .doc h2, .doc p, .doc .endpoint-box, .doc pre.block, .doc table, .doc .empty, .doc ul{ margin-left:16mm; margin-right:16mm; }
+    .doc table{ width:calc(100% - 32mm); }
+    .preview-wrap, .editor, .topbar{ background:transparent !important; }
+    @page{ size:A4; margin:0; }
+    body{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="dot"></div>
+    <div>
+      <h1>API Doc Builder</h1>
+      <span>befisc · api-ops internal tool</span>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="ghost" id="loadSampleBtn">Load Bureau C V5 sample</button>
+    <button class="ghost" id="importBtn">Import JSON</button>
+    <input type="file" id="importFile" accept=".json">
+    <button class="ghost" id="exportJsonBtn">Save as JSON</button>
+    <button class="ghost danger-hover" id="resetBtn">Reset</button>
+    <button class="pdf" id="exportPdfBtn">Export as PDF</button>
+    <button class="primary" id="exportWordBtn">Export to Word</button>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- EDITOR -->
+  <div class="editor">
+
+    <div class="section">
+      <h3>Basic info</h3>
+      <label>API Name</label>
+      <input type="text" id="apiName" placeholder="e.g. Bureau C V5">
+      <label>Endpoint URL</label>
+      <input type="text" id="endpoint" placeholder="https://prod.example.com/path/v1">
+      <label>Document Subtitle</label>
+      <input type="text" id="metaLine" placeholder="API Documentation — Generated 16 Aug 2026">
+      <div class="hint">Shown right under the title, in both the live preview and the exported Word/PDF file. Edit the date here whenever you need — it won't auto-update on its own.</div>
+    </div>
+
+    <div class="section">
+      <h3>Headers <span class="count" id="headersCount">0</span></h3>
+      <div id="headersList"></div>
+      <button class="add-row" id="addHeaderBtn">+ Add header</button>
+    </div>
+
+    <div class="section">
+      <h3>Curl</h3>
+      <textarea id="sampleCurl" rows="9" placeholder="curl --location 'https://...' \
+--header 'authkey: <authkey>' \
+--data '{ ... }'"></textarea>
+      <div class="hint">Paste the full curl exactly as it should appear — headers above are for the reference table only, this box is not auto-generated from them.</div>
+    </div>
+
+    <div class="section">
+      <h3>Sample Response</h3>
+      <textarea id="sampleResponse" rows="10" placeholder='{ "status": 1, "message": "Success", ... }'></textarea>
+      <div class="hint">Paste raw JSON. It's shown as-is in a code block — invalid JSON is fine too (e.g. partial snippets).</div>
+    </div>
+
+    <div class="section">
+      <h3>Status Codes <span class="count" id="statusCount">0</span></h3>
+      <div id="statusList"></div>
+      <button class="add-row" id="addStatusBtn">+ Add status code</button>
+    </div>
+
+    <div class="section">
+      <h3>Additional Tables <span class="count" id="tablesCount">0</span></h3>
+      <div id="tablesList"></div>
+      <button class="add-row" id="addTableBtn">+ Add table</button>
+      <div class="hint">Use this for anything table-shaped beyond headers/status codes — field mappings, error code breakdowns, vendor comparisons, parameter lists, etc. Columns and rows are fully custom.</div>
+    </div>
+
+    <div class="section">
+      <h3>Additional Sections <span class="count" id="customCount">0</span></h3>
+      <div id="customList"></div>
+      <button class="add-row" id="addCustomBtn">+ Add heading / section</button>
+      <div class="hint">For free-text notes — rate limits, error handling, vendor-specific quirks. Lines starting with "- " render as bullets.</div>
+    </div>
+
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="preview-wrap">
+    <div class="preview-label"><span class="live"></span> Live preview — this is what exports</div>
+    <div class="doc" id="docPreview"></div>
+  </div>
+</div>
+
+<script>
+let state = {
+  apiName: "",
+  endpoint: "",
+  metaLine: "",
+  headers: [],
+  curl: "",
+  response: "",
+  statusCodes: [],
+  customTables: [],
+  customSections: []
+};
+
+const SAMPLE = {
+  apiName: "Bureau C V5",
+  endpoint: "https://prod.smartauth.co/UICW/v5",
+  metaLine: "API Documentation — Generated 16 Aug 2026",
+  headers: [
+    {key:"authkey", value:"<authkey>"},
+    {key:"Content-Type", value:"application/json"}
+  ],
+  curl: `curl --location 'https://prod.smartauth.co/UICW/v5' \\
+--header 'authkey: <authkey>' \\
+--header 'Content-Type: application/json' \\
+--data '{
+  "company_name": "Ram Technologies Private Limited",
+  "date_of_incorporation": "01-01-2023",
+  "mobile": "9876543210",
+  "pan": "ABCDE1234F",
+  "address": "123 Industrial Area, Sector 62, Noida, Uttar Pradesh",
+  "pincode": "201309",
+  "state": "Uttar Pradesh",
+  "consent": "Y",
+  "consent_text": "We confirm obtaining valid customer consent to access/process their company data. Consent remains valid, informed, and unwithdrawn."
+}'`,
+  response: `{
+  "txn_id": "12345678-ABCD-1234-5678-ABCDEF123456",
+  "api_category": "Financial Check",
+  "billable": true,
+  "message": "Success",
+  "status": 1,
+  "result": {
+    "COMMERCIAL-REPORT-FILE": { "...": "truncated for brevity — full nested commercial report object" }
+  },
+  "datetime": "2026-08-05 12:00:00"
+}`,
+  statusCodes: [
+    {code:"1", billable:"Yes", desc:"Success"},
+    {code:"2", billable:"No", desc:"No Record Found"},
+    {code:"3", billable:"No", desc:"Invalid State Code"},
+    {code:"4", billable:"No", desc:"Invalid Pan Number Format"},
+    {code:"5", billable:"No", desc:"Invalid Mobile Number Format"},
+    {code:"6", billable:"No", desc:"Invalid Company Name Format"},
+    {code:"7", billable:"No", desc:"Invalid Address Format"},
+    {code:"8", billable:"No", desc:"Invalid State Format"},
+    {code:"9", billable:"No", desc:"Invalid Pincode Format"},
+    {code:"10", billable:"No", desc:"Invalid Date Of Incorporation Format"},
+    {code:"401", billable:"No", desc:"Authkey missing or invalid"},
+    {code:"402", billable:"No", desc:"Your account does not have the required privilege to access this API"},
+    {code:"403", billable:"No", desc:"Request limit exceeded"},
+    {code:"404", billable:"No", desc:"IP Address not whitelisted"},
+    {code:"301", billable:"No", desc:"Parameter missing / Consent missing or invalid"},
+    {code:"302", billable:"No", desc:"Source Down"}
+  ],
+  customTables: [
+    {
+      title: "Request Field Reference",
+      columns: ["Field", "Type", "Mandatory", "Notes"],
+      rows: [
+        ["company_name", "String", "Yes", "Registered legal name"],
+        ["pan", "String", "Yes", "10-char company PAN"],
+        ["consent", "String", "Yes", "Must be 'Y'"]
+      ]
+    }
+  ],
+  customSections: [
+    {heading:"Notes", body:"- Consent text is mandatory in every request body.\n- Response is billable only on status 1."}
+  ]
+};
+
+function esc(s){
+  return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ---------- RENDER EDITOR LISTS ----------
+function renderHeaders(){
+  const el = document.getElementById('headersList');
+  el.innerHTML = '';
+  state.headers.forEach((h,i)=>{
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+      <input type="text" placeholder="Header key" value="${esc(h.key)}" data-i="${i}" data-f="key">
+      <input type="text" placeholder="Header value" value="${esc(h.value)}" data-i="${i}" data-f="value">
+      <button class="icon-btn" data-del="${i}">×</button>`;
+    el.appendChild(row);
+  });
+  document.getElementById('headersCount').textContent = state.headers.length;
+  el.querySelectorAll('input').forEach(inp=>{
+    inp.oninput = e=>{
+      state.headers[e.target.dataset.i][e.target.dataset.f] = e.target.value;
+      renderPreview();
+    };
+  });
+  el.querySelectorAll('[data-del]').forEach(b=>{
+    b.onclick = ()=>{ state.headers.splice(b.dataset.del,1); renderHeaders(); renderPreview(); };
+  });
+}
+
+function renderStatus(){
+  const el = document.getElementById('statusList');
+  el.innerHTML = '';
+  state.statusCodes.forEach((s,i)=>{
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+      <input type="text" placeholder="Code" value="${esc(s.code)}" data-i="${i}" data-f="code" style="flex:0 0 70px;">
+      <select data-i="${i}" data-f="billable">
+        <option value="Yes" ${s.billable==='Yes'?'selected':''}>Yes</option>
+        <option value="No" ${s.billable==='No'?'selected':''}>No</option>
+      </select>
+      <input type="text" placeholder="Description" value="${esc(s.desc)}" data-i="${i}" data-f="desc">
+      <button class="icon-btn" data-del="${i}">×</button>`;
+    el.appendChild(row);
+  });
+  document.getElementById('statusCount').textContent = state.statusCodes.length;
+  el.querySelectorAll('input,select').forEach(inp=>{
+    inp.oninput = e=>{
+      state.statusCodes[e.target.dataset.i][e.target.dataset.f] = e.target.value;
+      renderPreview();
+    };
+  });
+  el.querySelectorAll('[data-del]').forEach(b=>{
+    b.onclick = ()=>{ state.statusCodes.splice(b.dataset.del,1); renderStatus(); renderPreview(); };
+  });
+}
+
+function renderCustom(){
+  const el = document.getElementById('customList');
+  el.innerHTML = '';
+  state.customSections.forEach((c,i)=>{
+    const block = document.createElement('div');
+    block.className = 'custom-block';
+    block.innerHTML = `
+      <div class="custom-block-top">
+        <span>SECTION ${i+1}</span>
+        <button class="icon-btn" data-del="${i}">×</button>
+      </div>
+      <input type="text" placeholder="Heading (e.g. Rate Limits)" value="${esc(c.heading)}" data-i="${i}" data-f="heading" style="margin-bottom:7px;">
+      <textarea rows="4" placeholder="Content... lines starting with '- ' become bullets" data-i="${i}" data-f="body">${esc(c.body)}</textarea>`;
+    el.appendChild(block);
+  });
+  document.getElementById('customCount').textContent = state.customSections.length;
+  el.querySelectorAll('input,textarea').forEach(inp=>{
+    inp.oninput = e=>{
+      state.customSections[e.target.dataset.i][e.target.dataset.f] = e.target.value;
+      renderPreview();
+    };
+  });
+  el.querySelectorAll('[data-del]').forEach(b=>{
+    b.onclick = ()=>{ state.customSections.splice(b.dataset.del,1); renderCustom(); renderPreview(); };
+  });
+}
+
+// ---------- ADDITIONAL TABLES ----------
+function renderCustomTables(){
+  const el = document.getElementById('tablesList');
+  el.innerHTML = '';
+  state.customTables.forEach((t,ti)=>{
+    const block = document.createElement('div');
+    block.className = 'custom-block';
+
+    const colsHtml = t.columns.map((c,ci)=>`
+      <div class="tbl-col-chip">
+        <input type="text" value="${esc(c)}" data-ti="${ti}" data-ci="${ci}" placeholder="Column">
+        <button data-delcol="${ti}:${ci}">×</button>
+      </div>`).join('');
+
+    const rowsHtml = t.rows.map((r,ri)=>`
+      <div class="tbl-row" data-row="${ti}:${ri}">
+        ${r.map((cell,ci)=>`<input type="text" value="${esc(cell)}" data-ti="${ti}" data-ri="${ri}" data-ci="${ci}" placeholder="${esc(t.columns[ci]||'')}">`).join('')}
+        <button class="icon-btn small" data-delrow="${ti}:${ri}">×</button>
+      </div>`).join('');
+
+    block.innerHTML = `
+      <div class="custom-block-top">
+        <span>TABLE ${ti+1}</span>
+        <button class="icon-btn" data-deltable="${ti}">×</button>
+      </div>
+      <input type="text" placeholder="Table title (e.g. Request Field Reference)" value="${esc(t.title)}" data-ti="${ti}" data-f="title" style="margin-bottom:9px;">
+      <label style="margin-top:0;">Columns</label>
+      <div class="tbl-cols">${colsHtml}
+        <button class="icon-btn small" data-addcol="${ti}" style="flex:0 0 auto;width:auto;padding:0 10px;">+ Column</button>
+      </div>
+      <label>Rows</label>
+      <div class="tbl-rows-scroll">${rowsHtml}</div>
+      <button class="add-row" data-addrow="${ti}" style="margin-top:2px;">+ Add row</button>
+    `;
+    el.appendChild(block);
+  });
+  document.getElementById('tablesCount').textContent = state.customTables.length;
+
+  el.querySelectorAll('input[data-f="title"]').forEach(inp=>{
+    inp.oninput = e=>{ state.customTables[e.target.dataset.ti].title = e.target.value; renderPreview(); };
+  });
+  el.querySelectorAll('.tbl-col-chip input').forEach(inp=>{
+    inp.oninput = e=>{
+      const {ti,ci} = e.target.dataset;
+      state.customTables[ti].columns[ci] = e.target.value;
+      renderPreview();
+    };
+  });
+  el.querySelectorAll('.tbl-row input').forEach(inp=>{
+    inp.oninput = e=>{
+      const {ti,ri,ci} = e.target.dataset;
+      state.customTables[ti].rows[ri][ci] = e.target.value;
+      renderPreview();
+    };
+  });
+  el.querySelectorAll('[data-addcol]').forEach(b=>{
+    b.onclick = ()=>{
+      const t = state.customTables[b.dataset.addcol];
+      t.columns.push('');
+      t.rows.forEach(r=>r.push(''));
+      renderCustomTables(); renderPreview();
+    };
+  });
+  el.querySelectorAll('[data-delcol]').forEach(b=>{
+    b.onclick = ()=>{
+      const [ti,ci] = b.dataset.delcol.split(':');
+      const t = state.customTables[ti];
+      if(t.columns.length<=1) return;
+      t.columns.splice(ci,1);
+      t.rows.forEach(r=>r.splice(ci,1));
+      renderCustomTables(); renderPreview();
+    };
+  });
+  el.querySelectorAll('[data-addrow]').forEach(b=>{
+    b.onclick = ()=>{
+      const t = state.customTables[b.dataset.addrow];
+      t.rows.push(t.columns.map(()=>''));
+      renderCustomTables(); renderPreview();
+    };
+  });
+  el.querySelectorAll('[data-delrow]').forEach(b=>{
+    b.onclick = ()=>{
+      const [ti,ri] = b.dataset.delrow.split(':');
+      state.customTables[ti].rows.splice(ri,1);
+      renderCustomTables(); renderPreview();
+    };
+  });
+  el.querySelectorAll('[data-deltable]').forEach(b=>{
+    b.onclick = ()=>{ state.customTables.splice(b.dataset.deltable,1); renderCustomTables(); renderPreview(); };
+  });
+}
+
+function customTablesHtml(){
+  if(!state.customTables.length) return '';
+  return state.customTables.map(t=>{
+    const head = `<tr>${t.columns.map(c=>`<th>${esc(c)||'&nbsp;'}</th>`).join('')}</tr>`;
+    const body = t.rows.length
+      ? t.rows.map(r=>`<tr>${r.map(cell=>`<td>${esc(cell)||'&nbsp;'}</td>`).join('')}</tr>`).join('')
+      : `<tr><td colspan="${t.columns.length}"><i>No rows</i></td></tr>`;
+    return `<h2>${esc(t.title)||'Untitled Table'}</h2><table>${head}${body}</table>`;
+  }).join('');
+}
+
+function customSectionHtml(){
+  if(!state.customSections.length) return '';
+  return state.customSections.map(c=>{
+    const lines = (c.body||'').split('\n');
+    const isBullets = lines.length && lines.every(l=>l.trim()==='' || l.trim().startsWith('- '));
+    let bodyHtml;
+    if(isBullets){
+      bodyHtml = '<ul>' + lines.filter(l=>l.trim().startsWith('- ')).map(l=>`<li>${esc(l.trim().slice(2))}</li>`).join('') + '</ul>';
+    } else {
+      bodyHtml = lines.map(l=> l.trim() ? `<p>${esc(l)}</p>` : '').join('');
+    }
+    return `<h2>${esc(c.heading||'Untitled Section')}</h2>${bodyHtml || '<p class="empty">—</p>'}`;
+  }).join('');
+}
+
+// ---------- PREVIEW ----------
+function renderPreview(){
+  const p = document.getElementById('docPreview');
+  const headersRows = state.headers.length
+    ? `<table><tr><th>Key</th><th>Value</th></tr>` +
+      state.headers.map(h=>`<tr><td>${esc(h.key)||'—'}</td><td>${esc(h.value)||'—'}</td></tr>`).join('') +
+      `</table>`
+    : '<p class="empty">No headers added</p>';
+
+  const statusRows = state.statusCodes.length
+    ? `<table><tr><th>Status</th><th>Billable</th><th>Description</th></tr>` +
+      state.statusCodes.map(s=>`<tr><td>${esc(s.code)}</td><td class="${s.billable==='Yes'?'billable-yes':'billable-no'}">${esc(s.billable)}</td><td>${esc(s.desc)}</td></tr>`).join('') +
+      `</table>`
+    : '<p class="empty">No status codes added</p>';
+
+  p.innerHTML = `
+    <h1>API Name: ${esc(state.apiName) || 'Untitled API'}</h1>
+    <div class="meta">${esc(state.metaLine) || '&nbsp;'}</div>
+
+    <h2>Endpoint</h2>
+    <div class="endpoint-box">${esc(state.endpoint) || '—'}</div>
+
+    <h2>Headers</h2>
+    ${headersRows}
+
+    <h2>Curl</h2>
+    <pre class="block">${esc(state.curl) || '—'}</pre>
+
+    <h2>Sample Response</h2>
+    <pre class="block">${esc(state.response) || '—'}</pre>
+
+    <h2>Status Codes</h2>
+    ${statusRows}
+
+    ${customTablesHtml()}
+
+    ${customSectionHtml()}
+  `;
+}
+
+function renderAll(){
+  document.getElementById('apiName').value = state.apiName;
+  document.getElementById('endpoint').value = state.endpoint;
+  document.getElementById('metaLine').value = state.metaLine;
+  document.getElementById('sampleCurl').value = state.curl;
+  document.getElementById('sampleResponse').value = state.response;
+  renderHeaders();
+  renderStatus();
+  renderCustomTables();
+  renderCustom();
+  renderPreview();
+}
+
+// ---------- BASIC INPUT BINDINGS ----------
+document.getElementById('apiName').oninput = e=>{ state.apiName = e.target.value; renderPreview(); };
+document.getElementById('endpoint').oninput = e=>{ state.endpoint = e.target.value; renderPreview(); };
+document.getElementById('metaLine').oninput = e=>{ state.metaLine = e.target.value; renderPreview(); };
+document.getElementById('sampleCurl').oninput = e=>{ state.curl = e.target.value; renderPreview(); };
+document.getElementById('sampleResponse').oninput = e=>{ state.response = e.target.value; renderPreview(); };
+
+document.getElementById('addHeaderBtn').onclick = ()=>{ state.headers.push({key:'',value:''}); renderHeaders(); renderPreview(); };
+document.getElementById('addStatusBtn').onclick = ()=>{ state.statusCodes.push({code:'',billable:'No',desc:''}); renderStatus(); renderPreview(); };
+document.getElementById('addCustomBtn').onclick = ()=>{ state.customSections.push({heading:'',body:''}); renderCustom(); renderPreview(); };
+document.getElementById('addTableBtn').onclick = ()=>{
+  state.customTables.push({title:'', columns:['Column 1','Column 2'], rows:[['','']]});
+  renderCustomTables(); renderPreview();
+};
+
+document.getElementById('loadSampleBtn').onclick = ()=>{
+  state = JSON.parse(JSON.stringify(SAMPLE));
+  renderAll();
+};
+
+document.getElementById('resetBtn').onclick = ()=>{
+  if(!confirm('Clear everything and start blank?')) return;
+  state = {apiName:"",endpoint:"",metaLine:"",headers:[],curl:"",response:"",statusCodes:[],customTables:[],customSections:[]};
+  renderAll();
+};
+
+document.getElementById('exportJsonBtn').onclick = ()=>{
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (state.apiName || 'api_doc').replace(/[^a-z0-9]+/gi,'_') + '.json';
+  a.click();
+};
+
+document.getElementById('importBtn').onclick = ()=> document.getElementById('importFile').click();
+document.getElementById('importFile').onchange = (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const data = JSON.parse(reader.result);
+      state = Object.assign({apiName:"",endpoint:"",metaLine:"",headers:[],curl:"",response:"",statusCodes:[],customTables:[],customSections:[]}, data);
+      renderAll();
+    }catch(err){ alert('Invalid JSON file.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+};
+
+// ---------- SHARED DOC HTML BUILDER (used by Word export + PDF print) ----------
+function buildDocHtml(){
+  const headersRows = state.headers.length
+    ? state.headers.map(h=>`<tr><td><b>${esc(h.key)||'&nbsp;'}</b></td><td>${esc(h.value)||'&nbsp;'}</td></tr>`).join('')
+    : `<tr><td colspan="2"><i>No headers</i></td></tr>`;
+
+  const statusRows = state.statusCodes.length
+    ? state.statusCodes.map(s=>`<tr><td>${esc(s.code)}</td><td>${esc(s.billable)}</td><td>${esc(s.desc)}</td></tr>`).join('')
+    : `<tr><td colspan="3"><i>No status codes</i></td></tr>`;
+
+  const tablesHtml = state.customTables.map(t=>{
+    const head = `<tr>${t.columns.map(c=>`<th>${esc(c)||'&nbsp;'}</th>`).join('')}</tr>`;
+    const body = t.rows.length
+      ? t.rows.map(r=>`<tr>${r.map(cell=>`<td>${esc(cell)||'&nbsp;'}</td>`).join('')}</tr>`).join('')
+      : `<tr><td colspan="${t.columns.length}"><i>No rows</i></td></tr>`;
+    return `<h2>${esc(t.title)||'Untitled Table'}</h2><table>${head}${body}</table>`;
+  }).join('');
+
+  const customHtml = state.customSections.map(c=>{
+    const lines = (c.body||'').split('\n');
+    const isBullets = lines.length && lines.every(l=>l.trim()==='' || l.trim().startsWith('- '));
+    let bodyHtml;
+    if(isBullets){
+      bodyHtml = '<ul>' + lines.filter(l=>l.trim().startsWith('- ')).map(l=>`<li>${esc(l.trim().slice(2))}</li>`).join('') + '</ul>';
+    } else {
+      bodyHtml = lines.map(l=> l.trim() ? `<p>${esc(l)}</p>` : '').join('');
+    }
+    return `<h2>${esc(c.heading||'Untitled Section')}</h2>${bodyHtml}`;
+  }).join('');
+
+  const title = 'API Name: ' + (esc(state.apiName) || 'Untitled API');
+
+  // Use the user-editable Document Subtitle field if set, so the export
+  // always reflects whatever date/text the user typed there. Falls back to
+  // an auto-generated "today" line only when the field is left blank.
+  let metaText;
+  if((state.metaLine || '').trim()){
+    metaText = esc(state.metaLine);
+  } else {
+    const dateStr = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+    metaText = `API Documentation &middot; Generated ${dateStr}`;
+  }
+
+  return { title, html: `
+  <h1>${title}</h1>
+  <div class="meta">${metaText}</div>
+
+  <h2>Endpoint</h2>
+  <div class="endpoint-box">${esc(state.endpoint) || '&nbsp;'}</div>
+
+  <h2>Headers</h2>
+  <table><tr><th>Key</th><th>Value</th></tr>${headersRows}</table>
+
+  <h2>Curl</h2>
+  <pre>${esc(state.curl) || '&nbsp;'}</pre>
+
+  <h2>Sample Response</h2>
+  <pre>${esc(state.response) || '&nbsp;'}</pre>
+
+  <h2>Status Codes</h2>
+  <table><tr><th>Status Code</th><th>Billable</th><th>Description</th></tr>${statusRows}</table>
+
+  ${tablesHtml}
+
+  ${customHtml}
+  `};
+}
+
+const DOC_STYLE = `
+  body{ font-family: Calibri, Arial, sans-serif; font-size:11pt; color:#1a1a1a; }
+  h1{ font-size:18pt; color:#fff; background:#000; padding:12pt 14pt; margin:0 0 4pt; text-align:center; }
+  .meta{ color:#000; font-size:9pt; margin-bottom:16pt; padding-bottom:8pt; border-bottom:1pt solid #d9dde3; font-family:Consolas,monospace; }
+  h2{ font-size:12pt; color:#000; text-transform:uppercase; letter-spacing:0.3pt; margin-top:18pt; margin-bottom:6pt; padding:7pt 10pt; background:#e6eae2; font-weight:700; }
+  p{ font-size:11pt; line-height:1.4; margin:0 0 6pt; }
+  table{ border-collapse:collapse; width:100%; margin-bottom:8pt; border:1pt solid #000; }
+  td, th{ border:1pt solid #000; padding:6pt 9pt; font-size:10pt; vertical-align:top; }
+  th{ background:#eef1f5; color:#12213f; text-align:left; font-weight:700; }
+  td{ background:#ffffff; color:#1a1a1a; }
+  pre{ background:#f7f8fa; color:#1a1a1a; border:1pt solid #d5dae2; padding:10pt; font-family:Consolas,monospace; font-size:9pt; line-height:1.4; white-space:pre-wrap; word-wrap:break-word; border-radius:3pt; }
+  .endpoint-box{ background:#f3f5f9; border:1pt solid #dde2ea; padding:7pt 9pt; font-family:Consolas,monospace; font-size:10pt; margin-bottom:6pt; }
+  ul{ margin:4pt 0 8pt 0pt; padding-left:20pt;}
+  li{ font-size:11pt; line-height:1.4; margin-bottom:2pt; }
+`;
+
+// ---------- EXPORT TO WORD ----------
+document.getElementById('exportWordBtn').onclick = ()=>{
+  const {title, html:bodyHtml} = buildDocHtml();
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>${title}</title>
+<!--[if gte mso 9]>
+<xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml>
+<![endif]-->
+<style>
+  @page { size: 21cm 29.7cm; margin: 2.2cm; }
+  ${DOC_STYLE}
+</style>
+</head>
+<body>${bodyHtml}</body>
+</html>`;
+
+  const blob = new Blob(['\ufeff', html], {type:'application/msword'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (state.apiName || 'API_Documentation').replace(/[^a-z0-9]+/gi,'_') + '.doc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
+
+// ---------- EXPORT AS PDF ----------
+// Prints the live preview panel directly (no new tab/popup — those get blocked
+// inside sandboxed artifact frames). Print CSS hides everything except .doc.
+// In the print dialog, set Destination to "Save as PDF".
+document.getElementById('exportPdfBtn').onclick = ()=>{
+  renderPreview();
+  window.print();
+};
+
+// init
+renderAll();
+</script>
+</body>
+</html>
